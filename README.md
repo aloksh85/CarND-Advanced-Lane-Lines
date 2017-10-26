@@ -7,7 +7,7 @@ The goal of the project was to write a software pipeline to identify the lane bo
 Note: The pipeline has been implemented in file called **AdvancedLaneFind _pipeline.py**
 ### Compute the camera calibration matrix and distortion coefficients given a set of chessboard images
 To compute the calibration matrix, I used Open CV  methods `findChessboardCorners`, `calibrateCamera` and `undistort`. Since this calibration is required to be done only once for a camera and lense, I saved the calibration matrix and distortion measure to a pickle format file. While developing the pipeline, I load the saved matrix and use it for undistorting all images. A sample of undistorted checkerboard images are available below:
-![Undistorted Images](undistorted_img.png)
+![Undistorted Images](undistorted_image.png)
 
 ### Pipeline
 The different stages of image processing are explained below 

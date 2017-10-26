@@ -56,7 +56,7 @@ def getCameraCalibrationMatrix(distortedImgDir, nx=9, ny=6 , redo_calibration=Fa
 def displayDistortionCorrectedImgs(distortedImgDir,mtx,dist):
 
     images = glob.glob(distortedImgDir+'/calibration*.jpg')
-    num_imgs =5
+    num_imgs =3
     f,axarr = plt.subplots(num_imgs,2,figsize=(15,15))
 
     for i,plt_num in zip(range(10,10+num_imgs),range(0,num_imgs)):
@@ -65,33 +65,29 @@ def displayDistortionCorrectedImgs(distortedImgDir,mtx,dist):
        axarr[plt_num,0].imshow(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
        axarr[plt_num,1].imshow(cv2.cvtColor(undist_img,cv2.COLOR_BGR2RGB))
 
-    plt.show()
+    f.savefig("undistorted_image.png")
 
-def thresholdImage(img,sx_thresh=(20,100),s_thresh=(110,130),l_thresh=(200,250),b_thresh=(95,110)):
-    #print('r: ',np.min(img[:,:,2]),'-',np.max(img[:,:,2]),
-    #'\ng:',np.min(img[:,:,1]),'-',np.max(img[:,:,1]),
-    #'\nb:',np.min(img[:,:,0]),'-',np.max(img[:,:,0]))
+def thresholdImage(img,sx_thresh=(20,80),s_thresh=(110,130),
+        l_thresh=(200,250),b_thresh=(95,110),
+        save_name='threshold_img',
+        flipRGB2BGR =True):
+    
+    if flipRGB2BGR:
+        img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)
+
     hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    #print('h: ',np.min(img[:,:,0]),'-',np.max(img[:,:,0]),
-    #'\nl:',np.min(img[:,:,1]),'-',np.max(img[:,:,1]),
-    #'\ns:',np.min(img[:,:,2]),'-',np.max(img[:,:,2]))
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     b_channel = lab[:,:,2]
     s_channel = hls[:,:,2]
     h_channel = hls[:,:,0]
     l_channel = hls[:,:,1]
-    #print('l:',np.min(lab[:,:,0]),'-',np.max(img[:,:,0]),
-    #        '\na:',np.min(img[:,:,1]),'-',np.max(img[:,:,1]),
-    #        '\nb:',np.min(img[:,:,2]),'-',np.max(img[:,:,2]))
-    
     # Grayscale image
     # NOTE: we already saw that standard grayscaling lost color information for the lane lines
     # Explore gradients in other colors spaces / color channels to see what might work better
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.equalizeHist(gray)
     # Sobel x
-    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0) # Take the derivative in x
-    abs_sobelx = np.absolute(gray) # Absolute x derivative to accentuate lines away from horizontal
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0,ksize=5) # Take the derivative in x
+    abs_sobelx = np.absolute(sobelx) # Absolute x derivative to accentuate lines away from horizontal
     scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
 
     # Threshold x gradient
@@ -107,16 +103,28 @@ def thresholdImage(img,sx_thresh=(20,100),s_thresh=(110,130),l_thresh=(200,250),
 
     b_binary =np.zeros_like(b_channel)
     b_binary[(b_channel > b_thresh[0]) & (b_channel <= b_thresh[1])] = 1
-    
+   
+    # Combine l_binary and sx_binary to see  
     lsx_combined = np.zeros_like(sxbinary)
     lsx_combined = l_binary+sxbinary
     lsx_binary = np.zeros_like(lsx_combined)
     lsx_binary[lsx_combined >1]=1
-    #print('lsx_combined:',np.min(lsx_combined),'-',np.max(lsx_combined))
-    
+   
+    #f,axarr = plt.subplots(2,2,figsize=(15,15))
+    #plt.subplots_adjust(wspace =0.05 ,hspace = 0.07)
+    #axarr[0,0].imshow(s_binary,'gray')
+    #axarr[0,0].set_title('S_binary(HLS)')
+    #axarr[0,1].imshow(l_binary,'gray')
+    #axarr[0,1].set_title('L_binary (HLS)')
+    #axarr[1,0].imshow(b_binary,'gray')
+    #axarr[1,0].set_title('B_binary (LAB)')
+    #axarr[1,1].imshow(sxbinary,'gray')
+    #axarr[1,1].set_title('Sobel binary')
+    #plt.savefig(save_name)
+
     # Stack each channel to view their individual contributions in green and blue respectively
     # This returns a stack of the two binary images, whose components you can see as different colors
-    color_binary = np.dstack((sxbinary , (l_binary), (b_binary))) * 255
+    color_binary = np.dstack((np.zeros_like(sxbinary) , (l_binary), (b_binary))) * 255
     # Combine the two binary thresholds
     combined_binary = np.zeros_like(sxbinary)
     combined_binary[(b_binary ==1)| (l_binary==1)] = 1
@@ -294,10 +302,13 @@ def drawOnPerspectiveImage(warped,left_fitx,right_fitx,ploty,undist,Minv):
     return result
 
 def get_offset(y_pts,x_left,x_right,x_m_px,y_m_px,img_size):
-    lane_center_px = int(np.mean(x_right[-3:] - x_left[-3:]))
-    offset_px = int(img_size[0]*0.5) - lane_center_px
-    offset_m = offset_px*x_m_px
+    """
+    Returns absolute offset of vehicle center from lane center in meters
 
+    """
+    lane_center_px = np.mean(x_left[-3:])+0.5*(np.mean(x_right[-3:] - x_left[-3:]))
+    offset_px = int((img_size[0]*0.5) - lane_center_px)
+    offset_m = np.absolute(offset_px*x_m_px)
 
     return offset_m
 
@@ -308,12 +319,11 @@ def weighted_img(img, initial_img, α=0.5, β=1., λ=0.):
     
     `initial_img` should be the image before any processing.
     
-    The result image is computed as follows:
-    
-    initial_img * α + img * β + λ
+    The result image is computed: initial_img * α + img * β + λ
     NOTE: initial_img and img must be the same shape!
     """
     return cv2.addWeighted(initial_img, α, img, β, λ)
+
 def main():
 
    calibration_img_dir="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_cal"
@@ -334,20 +344,23 @@ def main():
 
    M = getPerspectiveTransform(vertices_mask,dest_points)
    Minv = getPerspectiveTransform(dest_points,vertices_mask) 
-
+   out_directory = "/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/output_images/"
    
+   displayDistortionCorrectedImgs(calibration_img_dir,mtx,dist)
+   return mtx
    for img_path in images:
        test_img = cv2.imread(img_path)
        undist_img = cv2.undistort(test_img,mtx,dist,None,mtx)
-       #f1,arr1 = plt.subplots(1,2,figsize=(15,15))
-       #arr1[0].imshow(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
-       #arr1[1].imshow(cv2.cvtColor(undist_img,cv2.COLOR_BGR2RGB))
-       #displayDistortionCorrectedImgs(calibration_img_dir,mtx,dist)
-      
+       img_name = img_path.split('/')[-1]
        # combined threshold image
-       bin_threshold_img,color_bin_img = thresholdImage(undist_img)    
+       bin_threshold_img,color_bin_img = thresholdImage(undist_img,
+               l_thresh=(200,250),
+               b_thresh=(160,200),
+               save_name="binary_"+img_name,
+               flipRGB2BGR=False)    
        f2,arr2 = plt.subplots(3,2,figsize=(15,15))
-       
+       f_warp,arr_warp = plt.subplots(1,2,figsize=(15,15))
+
        # draw mask 
        cv2.line(undist_img, (vertices_mask[0,0],vertices_mask[0,1]),
          (vertices_mask[1,0],vertices_mask[1,1]), [0,0,255], 2)
@@ -360,19 +373,26 @@ def main():
       
        warped_img = warpImage(undist_img,M)
        binary_warped_img = warpImage(bin_threshold_img,M)
+       plt.subplots_adjust(hspace=0.05,wspace=0.05) 
+       arr_warp[0].imshow(cv2.cvtColor(warped_img,cv2.COLOR_BGR2RGB))
+       arr_warp[0].set_title('Warp Undistorted Img')
+       arr_warp[1].imshow(binary_warped_img,cmap='gray')
+       arr_warp[1].set_title('Warp Binary Image')
+#       f_warp.savefig(out_directory+"warp_"+img_name)
+
        binary_histogram = binaryImgHistogram(binary_warped_img)
        left_lane_fit, right_lane_fit,left_inds,right_inds,window_overlay_img = slidingWindowSearch(binary_warped_img,binary_histogram,left_lane,right_lane)
        
-       # Generate x and y values for plotting
+       #Generate x and y values for plotting
        ploty = np.linspace(0, binary_warped_img.shape[0]-1, binary_warped_img.shape[0] )
        left_fitx = left_lane_fit[0]*ploty**2 + left_lane_fit[1]*ploty + left_lane_fit[2]
        right_fitx = right_lane_fit[0]*ploty**2 + right_lane_fit[1]*ploty + right_lane_fit[2]       
-       # Generate image to plot lane lines on
+        #Generate image to plot lane lines on
        lcurve, rcurve = laneLineCurvature(left_fitx,right_fitx,ploty,(undist_img.shape[1],undist_img.shape[0]),XM_PER_PIX,YM_PER_PIX)
        offset_m = get_offset(ploty,left_fitx,right_fitx,XM_PER_PIX,YM_PER_PIX,(undist_img.shape[1],undist_img.shape[0]))
-       print('left lane curvature: ',lcurve)
-       print('right lane curvature: ',rcurve)
-       print('offset_m: ',offset_m)
+       #print('left lane curvature: ',lcurve)
+       #print('right lane curvature: ',rcurve)
+       #print('offset_m: ',offset_m)
        lane_plot_img = np.dstack((binary_warped_img,binary_warped_img,binary_warped_img))*255       
        lane_drawn_img = drawOnPerspectiveImage(binary_warped_img,left_fitx,right_fitx,ploty,undist_img,Minv)
        arr2[0,0].imshow(bin_threshold_img, 'gray')
@@ -382,9 +402,24 @@ def main():
        arr2[2,0].imshow(lane_plot_img)
        arr2[2,0].plot(left_fitx,ploty,color='blue')
        arr2[2,0].plot(right_fitx,ploty,color='blue')
-       arr2[2,1].imshow(cv2.cvtColor(lane_drawn_img,cv2.COLOR_BGR2RGB)) 
+       arr2[2,1].imshow(cv2.cvtColor(lane_drawn_img,cv2.COLOR_BGR2RGB))
 
-   if 1:
+       f_search, arr_search = plt.subplots(1,1,figsize=(15,15))
+       arr_search.imshow(window_overlay_img)
+       arr_search.plot(left_fitx,ploty,color='red')
+       arr_search.plot(right_fitx,ploty,color='red')
+#       f_search.savefig(out_directory+"search_"+img_name)
+    
+       cv2.putText(lane_drawn_img,"curveL: "+str(np.round(lcurve,2))+" m",(50,100),
+               cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),lineType =cv2.LINE_AA,thickness=3)
+       cv2.putText(lane_drawn_img,"curveR: "+str(np.round(rcurve,2))+" m",(50,170),
+               cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),lineType =cv2.LINE_AA,thickness=3)
+       cv2.putText(lane_drawn_img,"offset: "+str(np.round(offset_m,2))+" m",(50,250),
+               cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),lineType =cv2.LINE_AA,thickness=3)
+
+       #cv2.imwrite(out_directory+img_name+"_final.png",lane_drawn_img)
+
+   if False:
        plt.show()
 
 def getCameraPerspectiveMatrix():
@@ -398,10 +433,18 @@ def getCameraPerspectiveMatrix():
    # perspective transform
    img_size=cv2.imread(images[0]).shape
 
-   vertices_mask = np.float32([[250,img_size[0]-50],[580,450],[700,450],[1050,img_size[0]-50]])
-   dest_points = np.float32([[400,img_size[0]],[400,0],[img_size[1]-400,0],[img_size[1]-400,img_size[0]]])
-   M = getPerspectiveTransform(vertices_mask,dest_points)
-   Minv = getPerspectiveTransform(dest_points,vertices_mask) 
+   src_pts = np.float32([[250,img_size[0]-50],
+                                [580,450],
+                                [700,450],
+                                [1050,img_size[0]-50]])
+   
+   dest_points = np.float32([[400,img_size[0]],
+                            [400,0],
+                            [img_size[1]-400,0],
+                            [img_size[1]-400,img_size[0]]])
+
+   M = getPerspectiveTransform(src_pts,dest_points)
+   Minv = getPerspectiveTransform(dest_points,src_pts) 
 
    return mtx,dist,M,Minv
 
@@ -478,7 +521,9 @@ def localLaneSearch(binary_warped_img, left_lane,right_lane,margin =50 ):
 def process_image(img,mtx,dist,M,Minv,left_lane,right_lane):
        undist_img = cv2.undistort(img,mtx,dist,None,mtx)
        # combined threshold image
-       bin_threshold_img,color_bin_img = thresholdImage(undist_img)    
+       bin_threshold_img,color_bin_img = thresholdImage(undist_img,    
+               l_thresh=(200,250),
+               b_thresh=(160,200))
        warped_img = warpImage(undist_img,M)
        binary_warped_img = warpImage(bin_threshold_img,M)
        binary_histogram = binaryImgHistogram(binary_warped_img)
@@ -512,6 +557,7 @@ def process_image(img,mtx,dist,M,Minv,left_lane,right_lane):
 
        # Generate image to plot lane lines on
        lcurve_m, rcurve_m = laneLineCurvature(left_fitx,right_fitx,ploty,(undist_img.shape[1],undist_img.shape[0]),XM_PER_PIX,YM_PER_PIX)
+       offset_m = get_offset(ploty,left_fitx,right_fitx,XM_PER_PIX,YM_PER_PIX,(undist_img.shape[1],undist_img.shape[0]))
        img_with_lanes = drawOnPerspectiveImage(binary_warped_img,left_fitx,right_fitx,ploty,undist_img,Minv)
        bin_warped_img_3ch = np.dstack((binary_warped_img,binary_warped_img,binary_warped_img))*255
        bin_thresh_img_3ch = np.dstack((bin_threshold_img,bin_threshold_img,bin_threshold_img))*255
@@ -519,7 +565,13 @@ def process_image(img,mtx,dist,M,Minv,left_lane,right_lane):
        l_image_3ch = np.dstack((color_bin_img[:,:,1],color_bin_img[:,:,1],color_bin_img[:,:,1]))
        s_image_3ch =np.dstack((color_bin_img[:,:,2],color_bin_img[:,:,2],color_bin_img[:,:,2]))
        b_image_3ch =np.dstack((color_bin_img[:,:,0],color_bin_img[:,:,0],color_bin_img[:,:,0]))
-
+       
+       cv2.putText(img_with_lanes,"curveL: "+str(np.round(lcurve_m,2))+" m",(50,100),
+               cv2.FONT_HERSHEY_PLAIN,2,(255,0,0),lineType =cv2.LINE_AA,thickness=3)
+       cv2.putText(img_with_lanes,"curveR: "+str(np.round(rcurve_m,2))+" m",(50,170),
+               cv2.FONT_HERSHEY_PLAIN,2,(255,0,0),lineType =cv2.LINE_AA,thickness=3)
+       cv2.putText(img_with_lanes,"offset: "+str(np.round(offset_m,2))+" m",(50,250),
+               cv2.FONT_HERSHEY_PLAIN,2,(255,0,0),lineType =cv2.LINE_AA,thickness=3)
        result_img = np.vstack((np.hstack((undist_img,color_bin_img)),
                                np.hstack((bin_warped_img_3ch,img_with_lanes))))
        return img_with_lanes#result_img #out_img 
@@ -529,21 +581,27 @@ from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 def transformVideo(clip,camera_mtx,camera_dist,M,Minv,left_lane,right_lane):
+    temp_dir = "/home/alok/Documents/udacity_nd/temp_dir/"
+    
     def image_transform(image):
-         return process_image(image,camera_mtx,camera_dist,M,Minv,left_lane,right_lane)
+        transformVideo.count +=1
+        #image = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
+        #cv2.imwrite(temp_dir+"img_"+str(transformVideo.count)+".jpg",image)
+        return process_image(image,camera_mtx,camera_dist,M,Minv,left_lane,right_lane)
     return clip.fl_image(image_transform)
+
 
 
 def processVideo(videoPath,outputDir):
     camera_mtx,camera_dist,M,Minv = getCameraPerspectiveMatrix()
     left_lane  = Line()
     right_lane = Line()
-    print('M matrix: \n',M) 
+    #print('M matrix: \n',M) 
     videoFileName = videoPath.split('/')[-1]
     print('video file name:',videoFileName)
     output = outputDir+'/out'+videoFileName
     print('out_video:',output)
-    clip  = VideoFileClip(videoPath)#.subclip(0,10)
+    clip  = VideoFileClip(videoPath)#.subclip(35,45)
     processed_clip = clip.fx(transformVideo,camera_mtx,camera_dist,M,Minv,left_lane,right_lane)
     processed_clip.write_videofile(output,audio=False)
 
@@ -552,6 +610,7 @@ output_dir = "/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/test_vid
 video_list =["project_video.mp4","challenge_video.mp4","harder_challenge_video.mp4"]
 video_path="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/"
 
-processVideo(video_path+video_list[0],output_dir )
+transformVideo.count = 0
+#processVideo(video_path+video_list[0],output_dir )
 #processVideo(video_path+video_list[1],output_dir
 main()
