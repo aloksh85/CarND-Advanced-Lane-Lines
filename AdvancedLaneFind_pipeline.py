@@ -28,7 +28,7 @@ def getCameraCalibrationMatrix(distortedImgDir, nx=9, ny=6 , redo_calibration=Fa
     rvecs = None
     tvecs = None
 
-    if not os.path.isfile("/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_calibration.p") or redo_calibration:
+    if not os.path.isfile("./camera_calibration.p") or redo_calibration:
         for fname in images:
             print("Processing image: ",count)
             distortedImg = cv2.imread(fname)
@@ -65,7 +65,7 @@ def displayDistortionCorrectedImgs(distortedImgDir,mtx,dist):
        axarr[plt_num,0].imshow(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
        axarr[plt_num,1].imshow(cv2.cvtColor(undist_img,cv2.COLOR_BGR2RGB))
 
-    f.savefig("undistorted_image.png")
+    f.savefig("output_images/undistorted_image.png")
 
 def thresholdImage(img,sx_thresh=(20,80),s_thresh=(110,130),
         l_thresh=(200,250),b_thresh=(95,110),
@@ -328,12 +328,12 @@ def weighted_img(img, initial_img, α=0.5, β=1., λ=0.):
 
 def main():
 
-   calibration_img_dir="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_cal"
+   calibration_img_dir="./camera_cal"
 
    mtx,dist = getCameraCalibrationMatrix(calibration_img_dir) 
    print('cal matrix:' )
    print(mtx)
-   images = glob.glob("/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/test_images/*.jpg")
+   images = glob.glob("./test_images/*.jpg")
    left_lane =Line()
    right_lane = Line()
    # perspective transform
@@ -346,7 +346,7 @@ def main():
 
    M = getPerspectiveTransform(vertices_mask,dest_points)
    Minv = getPerspectiveTransform(dest_points,vertices_mask) 
-   out_directory = "/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/output_images/"
+   out_directory = "./output_images/"
    
    displayDistortionCorrectedImgs(calibration_img_dir,mtx,dist)
    f_results,arr_results = plt.subplots(4,2,figsize=(15,15)) 
@@ -437,14 +437,14 @@ def main():
 
 
 def getCameraPerspectiveMatrix():
-"""
-Returns camera calibration matrix, distortion measure, perspective transform and inverse perspective transform
-"""
-   calibration_img_dir="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_cal"
+   """
+   Returns camera calibration matrix, distortion measure, perspective transform and inverse perspective transform
+   """
+   calibration_img_dir="./camera_cal"
    mtx,dist = getCameraCalibrationMatrix(calibration_img_dir) 
    print('cal matrix:' )
    print(mtx)
-   images = glob.glob("/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/test_images/*.jpg")
+   images = glob.glob("./test_images/*.jpg")
     
    # perspective transform
    img_size=cv2.imread(images[0]).shape
@@ -465,10 +465,10 @@ Returns camera calibration matrix, distortion measure, perspective transform and
    return mtx,dist,M,Minv
 
 def localLaneSearch(binary_warped_img, left_lane,right_lane,margin =50 ):
-"""
-Returns co-efficients of polynomial calculated from polynomial fitting.\n 
-Used only when a good fit has been detected
-"""
+    """
+    Returns co-efficients of polynomial calculated from polynomial fitting.\n 
+    Used only when a good fit has been detected
+    """
     out_img =np.dstack((binary_warped_img,binary_warped_img,binary_warped_img))
     nonzero = binary_warped_img.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -600,7 +600,7 @@ from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 def transformVideo(clip,camera_mtx,camera_dist,M,Minv,left_lane,right_lane):
-    temp_dir = "/home/alok/Documents/udacity_nd/temp_dir/" 
+    #temp_dir = "/home/alok/Documents/udacity_nd/temp_dir/" 
     def image_transform(image):
         transformVideo.count +=1
         #image = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
@@ -624,9 +624,9 @@ def processVideo(videoPath,outputDir):
     processed_clip.write_videofile(output,audio=False)
 
 
-output_dir = "/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/test_video_output"
+output_dir = "./test_video_output"
 video_list =["project_video.mp4","challenge_video.mp4","harder_challenge_video.mp4"]
-video_path="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/"
+video_path="./"
 
 transformVideo.count = 0
 processVideo(video_path+video_list[0],output_dir )
