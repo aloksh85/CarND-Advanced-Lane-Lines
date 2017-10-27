@@ -96,5 +96,5 @@ I tried processing the challenge videos with this pipeline. However due to chall
 3. Devise a way to dynamically change search parameters or reset searching
 
 
- 
+ ### NOTE : this pipeline uses some code from Udacitys Self Driving Car online course
 
