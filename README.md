@@ -45,23 +45,36 @@ A sample of warped images using the perspective transform is available below
 ![Warped Images](output_images/warp_straight_lines1.jpg)
 
 ### Lane pixel identification
-To identify lane line pixels in warped binary image, I sum number of non-zero (white) pixels in each column of lower half of image. The columns with maximum relevant pixels on the left half and  right half of image are recorded as the base of lane line.
-Once the base location of left and right lane line has been identified, a sliding window search is used to identify lane line pixels. The number of windows to be used, and window width are configurable. 
-The search algorithm works as explained below:
+To identify lan	e line pixels in warped binary image, I sum number of non-zero (white) pixels in each column of lower half of image. The columns with maximum relevant pixels on the left half and  right half of image are recorded as the base of lane line.
+Once the base location of left and right lane line has been identified, a sliding window search is used to identify lane line pixels. The number of windows to be used, and window width are configurable. The sliding search is implemented in method called `slidingWindowSearch`
+
+The search algorithm works is explained below:
 1. Start at base positions of left and right line - create window using width and height
 2. Finds all pixels lying inside the current window and add them to a list of points that form the lane line
 3. If number of pixels exceed a set threshold, the x_position of next window center is updated to centroid of pixels found
 4. Update window location, goto step 2 and repeat until till entire height of image is covered
 
-Once coordinates of all pixels belonging to lanes have been identified, a second degree polynomial is fit to these coordinates. The sliding search is implemented in method called `slidingWindowSearch`
+After the search,  a second degree polynomial is fit to coordinates of the pixels that belong to lane lines. Polynomial fitting is achieved using numpy method `polyfit` which returns co-efficients (A,B &C) of the second degree polynomial - `f(y) = Ay^2 +By+C`
+
  ![Slide_search](output_images/search_test4.jpg)
+### Calculation of radius of curvature and offset
+ The radius of curvature is calculated as : `R = ((1+(2Ay+B)^2))^1.5)/|2A|` 
+ The method `lanelLineCurvature` computes radius of curvature. It uses y=image_height to compute the radius at base of the image
+ 
+ Offset of vehicle from lane center - It is assumed that camera is mounted at center of car such that the lane center is the midpoint at the bottom of the image between the two detected lane lines. Hence, the offset of lane center from  image center is the vehicle offset from lane center. The method `get_offset` computes the vehicle offset.
 
-
-The images for camera calibration are stored in the folder called `camera_cal`.  The images in `test_images` are for testing your pipeline on single frames.  If you want to extract more test images from the videos, you can simply use an image writing method like `cv2.imwrite()`, i.e., you can read the video in frame by frame as usual, and for frames you want to save for later you can write to an image file.  
-
-To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `ouput_images`, and include a description in your writeup for the project of what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
-
-The `challenge_video.mp4` video is an extra (and optional) challenge for you if you want to test your pipeline under somewhat trickier conditions.  The `harder_challenge.mp4` video is another optional challenge and is brutal!
-
-If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
+To transform the radius and offset from pixel space to metric units, I use the following mappings 
+ _YMetersperpixel_= 30/720
+ _XMetersperpixel_=3.7/700
+ 
+ These mappings are based on US regulations that require a minimum lane width of 12 feet or 3.7 meters, and the dashed lane lines are 10 feet or 3 meters long each.
+ 
+###Lane finding results on Test Images
+ The method `main` runs all images in the test_images folder through the pipeline explained above. Results are shown below. The pipeline is able to detect the lane lines fairly well. All processed test images are also available in the _output\_images_ directory
+ ![test image results](output_images/test_image_results.png)
+ 
+###  Processing video using the pipeline
+ The result of running the pipeline on the test video are available in the directory [test video directory](/test_video_output) 
+ 
+ 
 

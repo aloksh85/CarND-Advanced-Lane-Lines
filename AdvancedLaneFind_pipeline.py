@@ -273,7 +273,9 @@ def slidingWindowSearch(binary_warped,bin_hist,left_lane,right_lane,nwindows=9,w
 
 
 def laneLineCurvature(left_fitx,right_fitx,ploty,image_size,xm_per_pix,ym_per_pix):
-
+   """
+    Returns radius of curvature of left and right lanes
+   """
    left_fit_cr = np.polyfit(ploty*ym_per_pix,left_fitx*xm_per_pix,2) 
    right_fit_cr = np.polyfit(ploty*ym_per_pix,right_fitx*xm_per_pix,2) 
 
@@ -347,8 +349,11 @@ def main():
    out_directory = "/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/output_images/"
    
    displayDistortionCorrectedImgs(calibration_img_dir,mtx,dist)
-   return mtx
-   for img_path in images:
+   f_results,arr_results = plt.subplots(4,2,figsize=(15,15)) 
+   f_results.subplots_adjust(hspace =0.005,wspace =0.005)
+   row = 0
+   col = 0
+   for i,img_path in zip(range(0,len(images)),images):
        test_img = cv2.imread(img_path)
        undist_img = cv2.undistort(test_img,mtx,dist,None,mtx)
        img_name = img_path.split('/')[-1]
@@ -362,14 +367,14 @@ def main():
        f_warp,arr_warp = plt.subplots(1,2,figsize=(15,15))
 
        # draw mask 
-       cv2.line(undist_img, (vertices_mask[0,0],vertices_mask[0,1]),
-         (vertices_mask[1,0],vertices_mask[1,1]), [0,0,255], 2)
-       cv2.line(undist_img, (vertices_mask[1,0],vertices_mask[1,1]),
-         (vertices_mask[2,0],vertices_mask[2,1]), [0,0,255], 2)
-       cv2.line(undist_img, (vertices_mask[2,0],vertices_mask[2,1]),
-         (vertices_mask[3,0],vertices_mask[3,1]), [0,0,255], 2)
-       cv2.line(undist_img, (vertices_mask[3,0],vertices_mask[3,1]),
-         (vertices_mask[0,0],vertices_mask[0,1]), [0,0,255], 2)       
+       #cv2.line(undist_img, (vertices_mask[0,0],vertices_mask[0,1]),
+       #  (vertices_mask[1,0],vertices_mask[1,1]), [0,0,255], 2)
+       #cv2.line(undist_img, (vertices_mask[1,0],vertices_mask[1,1]),
+       #  (vertices_mask[2,0],vertices_mask[2,1]), [0,0,255], 2)
+       #cv2.line(undist_img, (vertices_mask[2,0],vertices_mask[2,1]),
+       #  (vertices_mask[3,0],vertices_mask[3,1]), [0,0,255], 2)
+       #cv2.line(undist_img, (vertices_mask[3,0],vertices_mask[3,1]),
+       #  (vertices_mask[0,0],vertices_mask[0,1]), [0,0,255], 2)       
       
        warped_img = warpImage(undist_img,M)
        binary_warped_img = warpImage(bin_threshold_img,M)
@@ -387,7 +392,7 @@ def main():
        ploty = np.linspace(0, binary_warped_img.shape[0]-1, binary_warped_img.shape[0] )
        left_fitx = left_lane_fit[0]*ploty**2 + left_lane_fit[1]*ploty + left_lane_fit[2]
        right_fitx = right_lane_fit[0]*ploty**2 + right_lane_fit[1]*ploty + right_lane_fit[2]       
-        #Generate image to plot lane lines on
+       #Generate image to plot lane lines on
        lcurve, rcurve = laneLineCurvature(left_fitx,right_fitx,ploty,(undist_img.shape[1],undist_img.shape[0]),XM_PER_PIX,YM_PER_PIX)
        offset_m = get_offset(ploty,left_fitx,right_fitx,XM_PER_PIX,YM_PER_PIX,(undist_img.shape[1],undist_img.shape[0]))
        #print('left lane curvature: ',lcurve)
@@ -417,11 +422,18 @@ def main():
        cv2.putText(lane_drawn_img,"offset: "+str(np.round(offset_m,2))+" m",(50,250),
                cv2.FONT_HERSHEY_PLAIN,2,(0,0,255),lineType =cv2.LINE_AA,thickness=3)
 
+       #if i!=0 and i % 2 ==0:
+       #    row += 1 
+       #    col = 0
+       #print ("num images: ", len(images))
+       #print("r,c :",row,",",col)    
+       #arr_results[row,col].imshow(cv2.cvtColor(lane_drawn_img,cv2.COLOR_BGR2RGB))
+       #col += 1
        #cv2.imwrite(out_directory+img_name+"_final.png",lane_drawn_img)
 
    if False:
        plt.show()
-
+  # f_results.savefig("output_images/test_image_results.png")
 def getCameraPerspectiveMatrix():
 
    calibration_img_dir="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_cal"
