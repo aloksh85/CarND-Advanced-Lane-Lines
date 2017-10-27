@@ -64,8 +64,8 @@ After the search,  a second degree polynomial is fit to coordinates of the pixel
  Offset of vehicle from lane center - It is assumed that camera is mounted at center of car such that the lane center is the midpoint at the bottom of the image between the two detected lane lines. Hence, the offset of lane center from  image center is the vehicle offset from lane center. The method `get_offset` computes the vehicle offset.
 
 To transform the radius and offset from pixel space to metric units, I use the following mappings 
- _YMetersperpixel_= 30/720
- _XMetersperpixel_=3.7/700
+* _YMetersperpixel_= 30/720
+* _XMetersperpixel_=3.7/700
  
  These mappings are based on US regulations that require a minimum lane width of 12 feet or 3.7 meters, and the dashed lane lines are 10 feet or 3 meters long each.
  
