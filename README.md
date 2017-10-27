@@ -77,6 +77,11 @@ To transform the radius and offset from pixel space to metric units, I use the f
  
 ###  Processing video using the pipeline
  The result of running the pipeline on the test video are available in the directory [test video directory](/test_video_output) 
+ To run the code  -
+ 1. cd to project directory
+ 2. enable _carnd-term1_ environment
+ 3. run command `python AdvancedLaneFind_pipeline.py`
+ 
  The pipeline performs well on the test video. The lane line estimation is fairly stable when the lighting conditions change and the radius of curvature estimates for both lane lines are similar.
  
  The method `process_image` is used to run each frame of the video through the pipeline. I employed a few extra steps to make sure the lane line detection stays stable between frames and is robust to changes in lighting in images
