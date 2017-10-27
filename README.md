@@ -70,11 +70,26 @@ To transform the radius and offset from pixel space to metric units, I use the f
  These mappings are based on US regulations that require a minimum lane width of 12 feet or 3.7 meters, and the dashed lane lines are 10 feet or 3 meters long each.
  
 ###Lane finding results on Test Images
- The method `main` runs all images in the test_images folder through the pipeline explained above. Results are shown below. The pipeline is able to detect the lane lines fairly well. All processed test images are also available in the _output\_images_ directory
+ The method `main` runs all images in the test_images folder through the pipeline explained above. Results are shown below. The pipeline is able to detect the lane lines fairly well. All processed test images are also available in the _output\_images_ directory.
  ![test image results](output_images/test_image_results.png)
+ 
+ 
  
 ###  Processing video using the pipeline
  The result of running the pipeline on the test video are available in the directory [test video directory](/test_video_output) 
+ The pipeline performs well on the test video. The lane line estimation is fairly stable when the lighting conditions change and the radius of curvature estimates for both lane lines are similar.
  
+ The method `process_image` is used to run each frame of the video through the pipeline. I employed a few extra steps to make sure the lane line detection stays stable between frames and is robust to changes in lighting in images
+ 1. A list of base locations of both lane lines is maintained. In each frame, if the new base location found is within a small distance from mean of last 3 entries in the list, it is added to the list and computation continues. If the new base location found is farther than a set distance, it is replaced with the mean of last 3 entries in the list. This helps recover from bad base location detection in histogram stage
+ 2. The pipeline has a localized lane search option (implemented in `localLaneSearch`) - Once a good polynomial fit has been found, it is stored. In the next frame it is sed to to initialize search for candidate lane pixels. The fit is then updated using the relevant pixels found in the new frame and so on. 
+ 
+ 
+### Processing Challenge Videos
+I tried processing the challenge videos with this pipeline. However due to challenging lighting conditions the thresholding stage does not produce a good binary image and hence the pipeline fails to initialize the lane lines properly. I have some idea that I would like to implement later :
+1. Have a metric to measure quality of threshold image produced for lane detection
+2. Have a metric to set thresholds dynamically
+3. Devise a way to dynamically change search parameters or reset searching
+
+
  
 

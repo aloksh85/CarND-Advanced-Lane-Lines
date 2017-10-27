@@ -434,8 +434,12 @@ def main():
    if False:
        plt.show()
   # f_results.savefig("output_images/test_image_results.png")
-def getCameraPerspectiveMatrix():
 
+
+def getCameraPerspectiveMatrix():
+"""
+Returns camera calibration matrix, distortion measure, perspective transform and inverse perspective transform
+"""
    calibration_img_dir="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/camera_cal"
    mtx,dist = getCameraCalibrationMatrix(calibration_img_dir) 
    print('cal matrix:' )
@@ -461,7 +465,10 @@ def getCameraPerspectiveMatrix():
    return mtx,dist,M,Minv
 
 def localLaneSearch(binary_warped_img, left_lane,right_lane,margin =50 ):
-
+"""
+Returns co-efficients of polynomial calculated from polynomial fitting.\n 
+Used only when a good fit has been detected
+"""
     out_img =np.dstack((binary_warped_img,binary_warped_img,binary_warped_img))
     nonzero = binary_warped_img.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -593,8 +600,7 @@ from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 def transformVideo(clip,camera_mtx,camera_dist,M,Minv,left_lane,right_lane):
-    temp_dir = "/home/alok/Documents/udacity_nd/temp_dir/"
-    
+    temp_dir = "/home/alok/Documents/udacity_nd/temp_dir/" 
     def image_transform(image):
         transformVideo.count +=1
         #image = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
@@ -623,6 +629,6 @@ video_list =["project_video.mp4","challenge_video.mp4","harder_challenge_video.m
 video_path="/home/alok/Documents/udacity_nd/CarND-Advanced-Lane-Lines/"
 
 transformVideo.count = 0
-#processVideo(video_path+video_list[0],output_dir )
+processVideo(video_path+video_list[0],output_dir )
 #processVideo(video_path+video_list[1],output_dir
-main()
+#main()
